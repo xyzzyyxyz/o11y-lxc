@@ -7,8 +7,8 @@ x-logging:
   &default-logging
   driver: "json-file"
   options:
-    max-size: "1m"
-    max-file: "1"
+    max-size: "10m"
+    max-file: "3"
     tag: "{{.Name}}"
 
 services:
@@ -25,10 +25,10 @@ services:
       - GF_PANELS_ENABLE_ALPHA=true
       - GF_INSTALL_PLUGINS=grafana-polystat-panel
     volumes:
-      - /docker/o11y/configs/grafana/provisioning/dashboards.yml:/etc/grafana/provisioning/dashboards/provisioning-dashboards.yaml:ro
-      - /docker/o11y/configs/grafana/provisioning/datasources.yml:/etc/grafana/provisioning/datasources/provisioning-datasources.yaml:ro
-      - /docker/o11y/dashboards/node-metrics.json:/var/lib/grafana/dashboards/node-metrics.json:ro
-      - /docker/o11y/dashboards/container-metrics.json:/var/lib/grafana/dashboards/container-metrics.json:ro
+      - /opt/stacks/o11y/configs/grafana/provisioning/dashboards.yml:/etc/grafana/provisioning/dashboards/provisioning-dashboards.yaml:ro
+      - /opt/stacks/o11y/configs/grafana/provisioning/datasources.yml:/etc/grafana/provisioning/datasources/provisioning-datasources.yaml:ro
+      - /opt/stacks/o11y/dashboards/node-metrics.json:/var/lib/grafana/dashboards/node-metrics.json:ro
+      - /opt/stacks/o11y/dashboards/container-metrics.json:/var/lib/grafana/dashboards/container-metrics.json:ro
       - grafana-data:/var/lib/grafana
     labels:
       logging: "promtail"
@@ -40,10 +40,6 @@ services:
     networks:
       - monitoring
     logging: *default-logging
-    healthcheck:
-      test: ["CMD-SHELL", "curl -f localhost:3000/api/health && echo 'ready'"]
-      interval: 10s
-      retries: 30
 
   prometheus:
     image: prom/prometheus:latest
@@ -61,9 +57,9 @@ services:
       logging: "promtail"
       logging_jobname: "containerlogs"
     volumes:
-      - /docker/o11y/configs/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
-      - /docker/o11y/configs/prometheus/recording-rules.yml:/etc/prometheus/recording-rules.yml
-      - /docker/o11y/configs/prometheus/alerting-rules.yml:/etc/prometheus/alerting-rules.yml
+      - /opt/stacks/o11y/configs/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      - /opt/stacks/o11y/configs/prometheus/recording-rules.yml:/etc/prometheus/recording-rules.yml
+      - /opt/stacks/o11y/configs/prometheus/alerting-rules.yml:/etc/prometheus/alerting-rules.yml
       - prometheus-data:/prometheus
     depends_on:
       - alertmanager
@@ -72,12 +68,6 @@ services:
     networks:
       - monitoring
     logging: *default-logging
-    healthcheck:
-      test: ["CMD", "wget", "http://localhost:9090"]
-      interval: 10s
-      timeout: 15s
-      retries: 10
-      start_period: 40s 
 
   cadvisor:
     image: gcr.io/cadvisor/cadvisor:latest
@@ -128,7 +118,7 @@ services:
       - '--storage.path=/alertmanager'
       - '--web.external-url=http://localhost:9093'
     volumes:
-      - /docker/o11y/configs/alertmanager/alertmanager-fallback-config.yml:/etc/alertmanager/config.yml
+      - /opt/stacks/o11y/configs/alertmanager/alertmanager-fallback-config.yml:/etc/alertmanager/config.yml
     ports:
       - 9093:9093
     labels:
@@ -137,12 +127,6 @@ services:
     networks:
       - monitoring
     logging: *default-logging
-    healthcheck:
-      test: ["CMD", "wget", "http://localhost:9093"]
-      interval: 10s
-      timeout: 15s
-      retries: 10
-      start_period: 40s 
 
   redis:
     image: redis:latest
@@ -151,11 +135,6 @@ services:
       - 6379:6379
     cpus: 0.5
     mem_limit: 512m
-    logging: *default-logging
-    healthcheck:
-      test: [ "CMD", "redis-cli", "--raw", "incr", "ping" ]
-      interval: 10s
-      retries: 30
 
   loki:
     image: grafana/loki:latest
@@ -168,12 +147,6 @@ services:
     networks:
       - monitoring
     logging: *default-logging
-    healthcheck:
-      test: ["CMD", "wget", "http://localhost:3100"]
-      interval: 10s
-      timeout: 15s
-      retries: 10
-      start_period: 40s 
 
   promtail:
     image:  grafana/promtail:latest
@@ -192,33 +165,13 @@ services:
       - monitoring
     logging: *default-logging
 
-  influxdb:
-    image: influxdb:latest
-    container_name: influxdb
-    restart: always
-    ports:
-      - 8086:8086
-      - 8089:8089/udp
-    labels:
-      logging: "promtail"
-      logging_jobname: "containerlogs"
-    networks:
-      - monitoring
-    volumes:
-      - influxdb-data:/var/lib/influxdb
-    logging: *default-logging
-    healthcheck:
-      test: ["CMD", "wget", "http://localhost:8086"]
-      interval: 10s
-      timeout: 15s
-      retries: 10
-      start_period: 40s 
-
 volumes:
-  grafana-data: {}
-  prometheus-data: {}
-  influxdb-data: {}
+  grafana-data: 
+    external: true
+  prometheus-data:
+    external: true
 
 networks:
   monitoring:
     name: monitoring
+    external: true

@@ -1,0 +1,33 @@
+x-logging:
+  &default-logging
+  driver: "json-file"
+  options:
+    max-size: "10m"
+    max-file: "3"
+    tag: "{{.Name}}"
+
+  services:
+    influxdb:
+    image: influxdb:latest
+    container_name: influxdb
+    restart: always
+    ports:
+      - 8086:8086
+      - 8089:8089/udp
+    labels:
+      logging: "promtail"
+      logging_jobname: "containerlogs"
+    networks:
+      - monitoring
+    volumes:
+      - influxdb-data:/var/lib/influxdb
+    logging: *default-logging
+
+networks:
+  monitoring:
+    name: monitoring
+    external: true
+
+volumes:
+  influx-data:
+    external: true
