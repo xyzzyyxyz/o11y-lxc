@@ -1,0 +1,224 @@
+# Based on https://ruanbekker.medium.com/docker-monitoring-stack-with-grafana-8454ae6918df
+# https://github.com/ruanbekker/docker-monitoring-stack-gpnc
+# https://tcude.net/monitoring-proxmox-with-influxdb-and-grafana/
+# https://www.smarthomebeginner.com/grafana-docker-compose-guide/
+
+x-logging:
+  &default-logging
+  driver: "json-file"
+  options:
+    max-size: "1m"
+    max-file: "1"
+    tag: "{{.Name}}"
+
+services:
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    restart: unless-stopped
+    environment:
+      #- GF_AUTH_ANONYMOUS_ENABLED=true
+      #- GF_AUTH_ANONYMOUS_ORG_ROLE=Admin
+      #- GF_USERS_DEFAULT_THEME=light
+      - GF_LOG_MODE=console
+      - GF_LOG_LEVEL=critical
+      - GF_PANELS_ENABLE_ALPHA=true
+      - GF_INSTALL_PLUGINS=grafana-polystat-panel
+    volumes:
+      - /docker/o11y/configs/grafana/provisioning/dashboards.yml:/etc/grafana/provisioning/dashboards/provisioning-dashboards.yaml:ro
+      - /docker/o11y/configs/grafana/provisioning/datasources.yml:/etc/grafana/provisioning/datasources/provisioning-datasources.yaml:ro
+      - /docker/o11y/dashboards/node-metrics.json:/var/lib/grafana/dashboards/node-metrics.json:ro
+      - /docker/o11y/dashboards/container-metrics.json:/var/lib/grafana/dashboards/container-metrics.json:ro
+      - grafana-data:/var/lib/grafana
+    labels:
+      logging: "promtail"
+      logging_jobname: "containerlogs"
+    depends_on:
+      - prometheus
+    ports:
+      - 3000:3000
+    networks:
+      - monitoring
+    logging: *default-logging
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f localhost:3000/api/health && echo 'ready'"]
+      interval: 10s
+      retries: 30
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    restart: unless-stopped
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--log.level=error'
+      - '--storage.tsdb.path=/prometheus'
+      - '--storage.tsdb.retention.time=7d'
+      - '--web.console.libraries=/usr/share/prometheus/console_libraries'
+      - '--web.console.templates=/usr/share/prometheus/consoles'
+      - '--web.external-url=http://localhost:9090'
+    labels:
+      logging: "promtail"
+      logging_jobname: "containerlogs"
+    volumes:
+      - /docker/o11y/configs/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      - /docker/o11y/configs/prometheus/recording-rules.yml:/etc/prometheus/recording-rules.yml
+      - /docker/o11y/configs/prometheus/alerting-rules.yml:/etc/prometheus/alerting-rules.yml
+      - prometheus-data:/prometheus
+    depends_on:
+      - alertmanager
+    ports:
+      - 9090:9090
+    networks:
+      - monitoring
+    logging: *default-logging
+    healthcheck:
+      test: ["CMD", "wget", "http://localhost:9090"]
+      interval: 10s
+      timeout: 15s
+      retries: 10
+      start_period: 40s 
+
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:latest
+    container_name: cadvisor
+    restart: unless-stopped
+    privileged: true
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:rw
+      - /sys:/sys:ro
+      - /var/lib/docker:/var/lib/docker:ro
+        # https://github.com/google/cadvisor/issues/1565#issuecomment-718812180
+      - /var/run/docker.sock:/var/run/docker.sock
+      #- /dev/disk:/dev/disk:ro
+    labels:
+      logging: "promtail"
+      logging_jobname: "containerlogs"
+    networks:
+      - monitoring
+    logging: *default-logging
+
+  node-exporter:
+    image: prom/node-exporter:latest
+    container_name: node-exporter
+    restart: unless-stopped
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    command:
+      - '--path.procfs=/host/proc'
+      - '--path.sysfs=/host/sys'
+      - '--collector.filesystem.ignored-mount-points'
+      - "^/(sys|proc|dev|host|etc|rootfs/var/lib/docker/containers|rootfs/var/lib/docker/overlay2|rootfs/run/docker/netns|rootfs/var/lib/docker/aufs)($$|/)"
+    labels:
+      logging: "promtail"
+      logging_jobname: "containerlogs"    
+    networks:
+      - monitoring
+    logging: *default-logging
+
+  alertmanager:
+    image: prom/alertmanager:latest
+    container_name: alertmanager
+    command:
+      - '--config.file=/etc/alertmanager/config.yml'
+      - '--log.level=error'
+      - '--storage.path=/alertmanager'
+      - '--web.external-url=http://localhost:9093'
+    volumes:
+      - /docker/o11y/configs/alertmanager/alertmanager-fallback-config.yml:/etc/alertmanager/config.yml
+    ports:
+      - 9093:9093
+    labels:
+      logging: "promtail"
+      logging_jobname: "containerlogs"
+    networks:
+      - monitoring
+    logging: *default-logging
+    healthcheck:
+      test: ["CMD", "wget", "http://localhost:9093"]
+      interval: 10s
+      timeout: 15s
+      retries: 10
+      start_period: 40s 
+
+  redis:
+    image: redis:latest
+    container_name: redis
+    ports:
+      - 6379:6379
+    cpus: 0.5
+    mem_limit: 512m
+    logging: *default-logging
+    healthcheck:
+      test: [ "CMD", "redis-cli", "--raw", "incr", "ping" ]
+      interval: 10s
+      retries: 30
+
+  loki:
+    image: grafana/loki:latest
+    ports:
+      - 3100:3100
+    command: -config.file=/etc/loki/local-config.yaml
+    labels:
+      logging: "promtail"
+      logging_jobname: "containerlogs"
+    networks:
+      - monitoring
+    logging: *default-logging
+    healthcheck:
+      test: ["CMD", "wget", "http://localhost:3100"]
+      interval: 10s
+      timeout: 15s
+      retries: 10
+      start_period: 40s 
+
+  promtail:
+    image:  grafana/promtail:latest
+    container_name: promtail
+    volumes:
+      - /docker/o11y/docker-promtail-loki-main/config/promtail.yaml:/etc/promtail/docker-config.yaml
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+      - /var/run/docker.sock:/var/run/docker.sock
+    command: -config.file=/etc/promtail/docker-config.yaml
+    labels:
+      logging: "promtail"
+      logging_jobname: "containerlogs"
+    depends_on:
+      - loki
+    networks:
+      - monitoring
+    logging: *default-logging
+
+  influxdb:
+    image: influxdb:latest
+    container_name: influxdb
+    restart: always
+    ports:
+      - 8086:8086
+      - 8089:8089/udp
+    labels:
+      logging: "promtail"
+      logging_jobname: "containerlogs"
+    networks:
+      - monitoring
+    volumes:
+      - influxdb-data:/var/lib/influxdb
+    logging: *default-logging
+    healthcheck:
+      test: ["CMD", "wget", "http://localhost:8086"]
+      interval: 10s
+      timeout: 15s
+      retries: 10
+      start_period: 40s 
+
+volumes:
+  grafana-data: {}
+  prometheus-data: {}
+  influxdb-data: {}
+
+networks:
+  monitoring:
+    name: monitoring
