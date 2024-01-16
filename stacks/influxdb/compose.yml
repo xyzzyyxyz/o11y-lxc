@@ -6,8 +6,8 @@ x-logging:
     max-file: "3"
     tag: "{{.Name}}"
 
-  services:
-    influxdb:
+services:
+  influxdb:
     image: influxdb:latest
     container_name: influxdb
     restart: always
@@ -29,5 +29,5 @@ networks:
     external: true
 
 volumes:
-  influx-data:
+  influxdb-data:
     external: true

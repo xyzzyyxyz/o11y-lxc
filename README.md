@@ -45,14 +45,34 @@ lxc-attach 201
 Clone repository to home directory
 
 ```sh
-git clone https://github.com/xyzzyyxyz/o11y-lxc
+apt install -y git && git clone https://github.com/xyzzyyxyz/o11y-lxc
 ```
 
 Copy directories into place in /opt
 
 ```sh
-cp ~/o11y-lxc/* /opt
+cp -r ~/o11y-lxc/* /opt
 ```
+
+Install Docker
+
+```sh
+curl -fsSL https://get.docker.com -o install-docker.sh | sh
+```
+
+Create docker volumes and network
+
+```sh
+docker volume create uptime-kuma-data && docker volume create grafana-data && docker volume create prometheus-data && docker volume create influxdb-data && docker network create monitoring
+```
+
+Startup dockge
+
+```sh
+docker compose -f /opt/dockge/compose.yml up -d
+```
+
+Finish configuring dockge at http://10.0.0.158:5001/setup
 
 ---
 

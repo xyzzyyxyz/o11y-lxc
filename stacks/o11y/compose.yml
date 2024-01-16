@@ -152,7 +152,7 @@ services:
     image:  grafana/promtail:latest
     container_name: promtail
     volumes:
-      - /docker/o11y/docker-promtail-loki-main/config/promtail.yaml:/etc/promtail/docker-config.yaml
+      - /opt/stacks/o11y/docker-promtail-loki-main/config/promtail.yaml:/etc/promtail/docker-config.yaml
       - /var/lib/docker/containers:/var/lib/docker/containers:ro
       - /var/run/docker.sock:/var/run/docker.sock
     command: -config.file=/etc/promtail/docker-config.yaml
