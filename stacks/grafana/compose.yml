@@ -1,0 +1,41 @@
+x-logging:
+  &default-logging
+  driver: "json-file"
+  options:
+    max-size: "10m"
+    max-file: "3"
+    tag: "{{.Name}}"
+
+services:
+  grafana:
+    image: grafana/grafana-enterprise:latest
+    container_name: grafana
+    restart: unless-stopped
+    environment:
+      - GF_LOG_MODE=console
+      - GF_LOG_LEVEL=critical
+      - GF_PANELS_ENABLE_ALPHA=true
+      - GF_INSTALL_PLUGINS=grafana-polystat-panel
+    ports:
+     - '3000:3000'
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - /opt/stacks/grafana/provisioning/dashboards.yml:/etc/grafana/provisioning/dashboards/provisioning-dashboards.yaml:ro
+      - /opt/stacks/grafana/provisioning/datasources.yml:/etc/grafana/provisioning/datasources/provisioning-datasources.yaml:ro
+      - /opt/stacks/grafana/dashboards/node-metrics.json:/var/lib/grafana/dashboards/node-metrics.json:ro
+      - /opt/stacks/grafana/dashboards/container-metrics.json:/var/lib/grafana/dashboards/container-metrics.json:ro
+    labels:
+      logging: "promtail"
+      logging_jobname: "containerlogs"
+    networks:
+      -  monitoring
+    logging: *default-logging
+
+volumes:
+  grafana-data: 
+    external: true
+
+networks:
+  monitoring:
+    name: monitoring
+    external: true

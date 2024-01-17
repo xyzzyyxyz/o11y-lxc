@@ -1,0 +1,27 @@
+x-logging:
+  &default-logging
+  driver: "json-file"
+  options:
+    max-size: "10m"
+    max-file: "3"
+    tag: "{{.Name}}"
+
+services:
+  redis:
+    image: redis:latest
+    container_name: redis
+    ports:
+      - 6379:6379
+    cpus: 0.5
+    mem_limit: 512m
+    labels:
+      logging: "promtail"
+      logging_jobname: "containerlogs"
+    networks:
+      - monitoring
+    logging: *default-logging
+    
+networks:
+  monitoring:
+    name: monitoring
+    external: true

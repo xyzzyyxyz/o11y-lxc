@@ -1,0 +1,32 @@
+x-logging:
+  &default-logging
+  driver: "json-file"
+  options:
+    max-size: "10m"
+    max-file: "3"
+    tag: "{{.Name}}"
+
+services:
+  alertmanager:
+    image: prom/alertmanager:latest
+    container_name: alertmanager
+    command:
+      - '--config.file=/etc/alertmanager/config.yml'
+      - '--log.level=error'
+      - '--storage.path=/alertmanager'
+      - '--web.external-url=http://localhost:9093'
+    volumes:
+      - /opt/stacks/alertmanager/config/alertmanager-fallback-config.yml:/etc/alertmanager/config.yml
+    ports:
+      - 9093:9093
+    labels:
+      logging: "promtail"
+      logging_jobname: "containerlogs"
+    networks:
+      - monitoring
+    logging: *default-logging
+   
+networks:
+  monitoring:
+    name: monitoring
+    external: true

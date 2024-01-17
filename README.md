@@ -74,6 +74,19 @@ docker compose -f /opt/dockge/compose.yml up -d
 
 Finish configuring dockge at http://10.0.0.158:5001/setup
 
+Install tailscale
+
+```sh
+curl -fsSL https://tailscale.com/install.sh | sh
+```
+
+Add to lxc conf in PVE console
+
+```sh
+echo 'lxc.cgroup2.devices.allow: c 10:200 rwm
+lxc.mount.entry: /dev/net/tun dev/net/tun none bind,create=file' >> /etc/pve/lxc/201.conf
+```
+
 ---
 
 Folder structure intended for /opt directory

@@ -1,0 +1,25 @@
+x-logging:
+  &default-logging
+  driver: "json-file"
+  options:
+    max-size: "10m"
+    max-file: "3"
+    tag: "{{.Name}}"
+
+services:
+  loki:
+    image: grafana/loki:latest
+    ports:
+      - "3100:3100"
+    command: -config.file=/etc/loki/local-config.yaml
+    labels:
+      logging: "promtail"
+      logging_jobname: "containerlogs"
+    networks:
+      -  monitoring
+    logging: *default-logging
+   
+networks:
+  monitoring:
+    name: monitoring
+    external: true

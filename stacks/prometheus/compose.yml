@@ -1,0 +1,39 @@
+x-logging:
+  &default-logging
+  driver: "json-file"
+  options:
+    max-size: "10m"
+    max-file: "3"
+    tag: "{{.Name}}"
+
+services:
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    restart: unless-stopped
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--log.level=error'
+      - '--storage.tsdb.path=/prometheus'
+      - '--storage.tsdb.retention.time=7d'
+      - '--web.console.libraries=/usr/share/prometheus/console_libraries'
+      - '--web.console.templates=/usr/share/prometheus/consoles'
+      - '--web.external-url=http://localhost:9090'
+    volumes:
+      - /opt/stacks/prometheus/config/prometheus.yml:/etc/prometheus/prometheus.yml
+      - /opt/stacks/prometheus/config/recording-rules.yml:/etc/prometheus/recording-rules.yml
+      - /opt/stacks/prometheus/config/alerting-rules.yml:/etc/prometheus/alerting-rules.yml
+      - prometheus-data:/prometheus
+    ports:
+      - 9090:9090
+    labels:
+      logging: "promtail"
+      logging_jobname: "containerlogs"
+    networks:
+    -  monitoring
+    logging: *default-logging
+   
+networks:
+  monitoring:
+    name: monitoring
+    external: true

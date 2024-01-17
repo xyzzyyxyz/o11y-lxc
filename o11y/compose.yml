@@ -149,13 +149,13 @@ services:
     logging: *default-logging
 
   promtail:
-    image:  grafana/promtail:latest
+    image: grafana/promtail:latest
     container_name: promtail
     volumes:
-      - /opt/stacks/o11y/promtail/promtail.yaml:/etc/promtail/docker-config.yaml
+      - /opt/stacks/o11y/configs/promtail:/etc/promtail
       - /var/lib/docker/containers:/var/lib/docker/containers:ro
       - /var/run/docker.sock:/var/run/docker.sock
-    command: -config.file=/etc/promtail/docker-config.yaml
+    command: -config.file=/etc/promtail/promtail.yaml
     labels:
       logging: "promtail"
       logging_jobname: "containerlogs"
