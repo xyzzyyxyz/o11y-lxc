@@ -7,21 +7,18 @@ x-logging:
     tag: "{{.Name}}"
 
 services:
-  promtail:
-    image: grafana/promtail:latest
-    container_name: promtail
-    volumes:
-      - /opt/stacks/promtail:/etc/promtail
-      - /var/lib/docker/containers:/var/lib/docker/containers:ro
-      - /var/run/docker.sock:/var/run/docker.sock
-    command: -config.file=/etc/promtail/promtail.yaml
+  
     labels:
       logging: "promtail"
       logging_jobname: "containerlogs"
     networks:
-      -  monitoring
+    -  monitoring
     logging: *default-logging
    
+volumes:
+  prometheus-data:
+    external: true
+
 networks:
   monitoring:
     name: monitoring

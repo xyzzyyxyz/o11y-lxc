@@ -33,6 +33,10 @@ services:
     -  monitoring
     logging: *default-logging
    
+volumes:
+  prometheus-data:
+    external: true
+
 networks:
   monitoring:
     name: monitoring

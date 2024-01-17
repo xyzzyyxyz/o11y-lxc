@@ -36,6 +36,19 @@ Select desired storage pool when prompted
 
 ### Setup environment
 
+Add to lxc conf in PVE console
+
+```sh
+echo 'lxc.cgroup2.devices.allow: c 10:200 rwm
+lxc.mount.entry: /dev/net/tun dev/net/tun none bind,create=file' >> /etc/pve/lxc/201.conf
+```
+
+Restart container
+
+```sh
+pct reboot 201
+```
+
 Connect to PVE using SSH and connect to container
 
 ```sh
@@ -57,7 +70,7 @@ cp -r ~/o11y-lxc/* /opt
 Install Docker
 
 ```sh
-curl -fsSL https://get.docker.com -o install-docker.sh | sh
+curl -fsSL https://get.docker.com -o install-docker.sh && chmod +x install-docker.sh && ./install-docker.sh
 ```
 
 Create docker volumes and network
@@ -78,13 +91,6 @@ Install tailscale
 
 ```sh
 curl -fsSL https://tailscale.com/install.sh | sh
-```
-
-Add to lxc conf in PVE console
-
-```sh
-echo 'lxc.cgroup2.devices.allow: c 10:200 rwm
-lxc.mount.entry: /dev/net/tun dev/net/tun none bind,create=file' >> /etc/pve/lxc/201.conf
 ```
 
 ---

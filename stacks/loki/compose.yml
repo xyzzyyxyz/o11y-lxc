@@ -7,11 +7,15 @@ x-logging:
     tag: "{{.Name}}"
 
 services:
-  loki:
-    image: grafana/loki:latest
+  homepage:
+    image: ghcr.io/gethomepage/homepage:latest
+    container_name: homepage
     ports:
-      - "3100:3100"
-    command: -config.file=/etc/loki/local-config.yaml
+      - 3001:3000
+    volumes:
+      - /opt/stacks/homepage/config:/app/config # Make sure your local config directory exists
+      - /var/run/docker.sock:/var/run/docker.sock:ro # optional, for docker integrations
+    restart: unless-stopped
     labels:
       logging: "promtail"
       logging_jobname: "containerlogs"
