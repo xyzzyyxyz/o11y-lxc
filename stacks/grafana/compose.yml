@@ -33,7 +33,6 @@ services:
 
 volumes:
   grafana-data: 
-    external: true
 
 networks:
   monitoring:

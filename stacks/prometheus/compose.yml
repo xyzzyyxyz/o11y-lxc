@@ -35,7 +35,6 @@ services:
    
 volumes:
   prometheus-data:
-    external: true
 
 networks:
   monitoring:
